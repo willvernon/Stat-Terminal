@@ -43,7 +43,9 @@ ButtonOption Style() {
 	return option;
 }
 
-// Function to fetch all player names from the database
+// Function to fetch all player names from the database Really only needed for
+// dropdown
+// TODO: May Delete fetching all player names dont need unless using dropdown
 std::vector<std::string> fetchPlayerNames() {
 	std::vector<std::string> player_names;
 	sqlite3 *db;
@@ -167,13 +169,26 @@ int main() {
 	// Dropdown component
 	/*auto dropdown = Dropdown(&player_names, &selected_player_idx);*/
 
+	// State to track current screen (0 = splash, 1 = main page)
+	int current_screen = 0;
+
+	// Back button
+	auto back_button = Button(
+		"<-",
+		[&] {
+			current_screen = 0; // Back to splash page
+		},
+		Style());
+
 	// Search button
 	auto submit_button = Button(
 		"Search",
 		[&] {
 			if (!player_name_input.empty()) {
+				current_screen = 1;
 				performSearch(player_name_input, current_stats, error_msg);
 			} else if (!player_names.empty() && selected_player_idx >= 0) {
+				current_screen = 0;
 				performSearch(player_names[selected_player_idx], current_stats,
 							  error_msg);
 			}
@@ -181,12 +196,14 @@ int main() {
 		Style());
 
 	// Container to manage components
-	auto component = Container::Horizontal({input_player_name, submit_button});
+	auto component =
+		Container::Horizontal({input_player_name, submit_button, back_button});
 
 	// Add custom event handling for Enter key
 	auto event_handler = CatchEvent(component, [&](Event event) {
 		if (event == Event::Return && input_player_name->Focused()) {
 			performSearch(player_name_input, current_stats, error_msg);
+			current_screen = 1;
 			player_name_input.clear();
 
 			return true; // Event handled
@@ -254,7 +271,8 @@ int main() {
 	// Renderer
 	auto renderer = Renderer(event_handler, [&] {
 		// Stay on splash screen until a successful search is performed
-		if (current_stats.name.empty()) {
+		if (current_screen == 0) {
+			// Splash Screen
 			return vbox({
 					   welcome(),
 					   hbox({
@@ -271,6 +289,7 @@ int main() {
 				   }) |
 				   vcenter | hcenter | border;
 		} else {
+			// Stat Screen
 			return gridbox({
 					   {
 						   vbox({player_info() |
@@ -278,6 +297,7 @@ int main() {
 							   size(WIDTH, EQUAL, 22),
 						   vbox({
 							   hbox({
+								   back_button->Render(),
 								   text("Search New Player: "),
 								   input_player_name->Render() | vcenter | flex,
 								   /*dropdown->Render() | vcenter,*/
