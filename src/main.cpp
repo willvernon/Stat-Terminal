@@ -165,7 +165,24 @@ int main() {
 	};
 	auto input_player_name =
 		Input(&player_name_input, "Enter player name", input_option);
-
+	// Toggle for league selection
+	int toggle_selected = 0;
+	std::vector<std::string> toggle_entries = {
+		"Any Sport",
+		"NFL",
+		"NBA",
+		"NHL",
+	};
+	auto sport_toggle = Toggle(&toggle_entries, &toggle_selected);
+	// Radiobox selects which db table for which sport to search
+	int radiobox_selected = 0;
+	std::vector<std::string> radiobox_entries = {
+		"Any Sport",
+		"NFL",
+		"NBA",
+		"NHL",
+	};
+	auto radiobox = Radiobox(&radiobox_entries, &radiobox_selected);
 	// Dropdown component
 	/*auto dropdown = Dropdown(&player_names, &selected_player_idx);*/
 
@@ -196,8 +213,12 @@ int main() {
 		Style());
 
 	// Container to manage components
-	auto component =
-		Container::Horizontal({input_player_name, submit_button, back_button});
+	auto component = Container::Horizontal({
+		sport_toggle,
+		input_player_name,
+		submit_button,
+		back_button,
+	});
 
 	// Add custom event handling for Enter key
 	auto event_handler = CatchEvent(component, [&](Event event) {
@@ -275,6 +296,11 @@ int main() {
 			// Splash Screen
 			return vbox({
 					   welcome(),
+					   hbox({
+						   text("Select a league: "),
+						   sport_toggle->Render(),
+					   }) | hcenter |
+						   vcenter | border | xflex,
 					   hbox({
 						   text("Player: ") | vcenter,
 						   input_player_name->Render() | vcenter |
