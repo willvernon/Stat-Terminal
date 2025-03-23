@@ -1,8 +1,3 @@
-# Stat Terminal
-
-=======
-
-
 # Stats Terminal
 A TUI App
 
