@@ -14,6 +14,12 @@ Welcome to the Sports Stats Terminal App! This is a TUI designed to provide fast
 - FTXUI: A C++ library for building interactive terminal user interfaces.
 - SQLite: A lightweight, embedded database for storing and querying player stats.
 
+#### Splash Screen:
+![CleanShot 2025-03-23 at 18 26 08](https://github.com/user-attachments/assets/092118a1-d61a-4e8a-933c-4719e9ab374c)
+
+#### Main Screen:
+![CleanShot 2025-03-23 at 18 26 38](https://github.com/user-attachments/assets/43011f81-1028-4e13-8a3d-af012b5d528c)
+
 ### Installation
 
 Clone the Repository
