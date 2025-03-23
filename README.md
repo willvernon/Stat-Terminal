@@ -50,19 +50,18 @@ Run the App
 ```
 ### Usage
 
-    Launch the app in your terminal.
-    Use the FTXUI interface to search for players or browse stats.
-    Example commands (to be implemented):
-        search LeBron James - Capilization Matters - Displays LeBron's latest stats.
-        list top-scorers - Shows top NBA scorers.
+- Launch the app in your terminal.
+- Use the FTXUI interface to search for players or browse stats.
+- Example commands (to be implemented):
+    - search LeBron James - Capilization Matters - Displays LeBron's latest stats.
 
 ### Current Status
 
-    Focused on basketball stats.
-    Database schema and sample data are not yet included in the repo (coming soon!).
-    Additional sports support is in the planning stages.
-    # Todo
+- Focused on basketball stats.
+- Database schema and sample data are not yet included in the repo (coming soon!).
+- Additional sports support is in the planning stages.
 
+TODO
 <!--TODO-->
 
 - [x] get interface to work with data
