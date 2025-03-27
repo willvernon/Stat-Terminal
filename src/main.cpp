@@ -48,10 +48,11 @@ struct PlayerStats {
 	std::string awards;
 };
 
-// Global instance (or pass it around as needed)
-PlayerStats current_stats;
+std::vector<PlayerStats>
+	player_seasons; // Global vector instead of single PlayerStats
 
 ButtonOption Style() {
+	// Your existing Style function remains unchanged
 	auto option = ButtonOption::Animated();
 	option.transform = [](const EntryState &s) {
 		auto element = text(s.label);
@@ -67,7 +68,7 @@ void performSearch(const std::string &player_name_input,
 				   std::string &error_msg) {
 	std::cerr << "Searching for: " << player_name_input << std::endl;
 	error_msg.clear();
-	current_stats = PlayerStats{}; // Reset stats
+	player_seasons.clear(); // Clear previous results
 
 	sqlite3 *db;
 	int rc = sqlite3_open("../db/stat-term.db", &db);
@@ -84,7 +85,9 @@ void performSearch(const std::string &player_name_input,
 		"fg, fga, fg_pct, three_p, three_pa, three_p_pct, two_p, two_pa, "
 		"two_p_pct, efg_pct, ft, fta, ft_pct, orb, drb, trb, ast, stl, blk, "
 		"tov, pf, pts, awards "
-		"FROM nba_season_player_stats WHERE player_name = ?";
+		"FROM nba_season_player_stats WHERE player_name = ? "
+		"ORDER BY season DESC";
+
 	rc = sqlite3_prepare_v2(db, query, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		error_msg = "SQL error: " + std::string(sqlite3_errmsg(db));
@@ -94,66 +97,66 @@ void performSearch(const std::string &player_name_input,
 	}
 
 	sqlite3_bind_text(stmt, 1, player_name_input.c_str(), -1, SQLITE_STATIC);
-	rc = sqlite3_step(stmt);
-	if (rc == SQLITE_ROW) {
-		current_stats.season =
+
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		PlayerStats stats;
+		stats.season =
 			sqlite3_column_text(stmt, 0)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0))
 				: "";
-		current_stats.rk = sqlite3_column_int(stmt, 1);
-		current_stats.player_name =
+		stats.rk = sqlite3_column_int(stmt, 1);
+		stats.player_name =
 			sqlite3_column_text(stmt, 2)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2))
 				: "";
-		current_stats.age = sqlite3_column_int(stmt, 3);
-		current_stats.team =
+		stats.age = sqlite3_column_int(stmt, 3);
+		stats.team =
 			sqlite3_column_text(stmt, 4)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4))
 				: "";
-		current_stats.pos =
+		stats.pos =
 			sqlite3_column_text(stmt, 5)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 5))
 				: "";
-		current_stats.g = sqlite3_column_int(stmt, 6);
-		current_stats.gs = sqlite3_column_int(stmt, 7);
-		current_stats.mp = static_cast<float>(sqlite3_column_double(stmt, 8));
-		current_stats.fg = sqlite3_column_int(stmt, 9);
-		current_stats.fga = sqlite3_column_int(stmt, 10);
-		current_stats.fg_pct =
-			static_cast<float>(sqlite3_column_double(stmt, 11));
-		current_stats.three_p = sqlite3_column_int(stmt, 12);
-		current_stats.three_pa = sqlite3_column_int(stmt, 13);
-		current_stats.three_p_pct =
-			static_cast<float>(sqlite3_column_double(stmt, 14));
-		current_stats.two_p = sqlite3_column_int(stmt, 15);
-		current_stats.two_pa = sqlite3_column_int(stmt, 16);
-		current_stats.two_p_pct =
-			static_cast<float>(sqlite3_column_double(stmt, 17));
-		current_stats.efg_pct =
-			static_cast<float>(sqlite3_column_double(stmt, 18));
-		current_stats.ft = static_cast<float>(sqlite3_column_double(stmt, 19));
-		current_stats.fta = sqlite3_column_int(stmt, 20);
-		current_stats.ft_pct =
-			static_cast<float>(sqlite3_column_double(stmt, 21));
-		current_stats.orb = sqlite3_column_int(stmt, 22);
-		current_stats.drb = sqlite3_column_int(stmt, 23);
-		current_stats.trb = sqlite3_column_int(stmt, 24);
-		current_stats.ast = sqlite3_column_int(stmt, 25);
-		current_stats.stl = sqlite3_column_int(stmt, 26);
-		current_stats.blk = sqlite3_column_int(stmt, 27);
-		current_stats.tov = sqlite3_column_int(stmt, 28);
-		current_stats.pf = sqlite3_column_int(stmt, 29);
-		current_stats.pts = sqlite3_column_int(stmt, 30);
-		current_stats.awards =
+		stats.g = sqlite3_column_int(stmt, 6);
+		stats.gs = sqlite3_column_int(stmt, 7);
+		stats.mp = static_cast<float>(sqlite3_column_double(stmt, 8));
+		stats.fg = sqlite3_column_int(stmt, 9);
+		stats.fga = sqlite3_column_int(stmt, 10);
+		stats.fg_pct = static_cast<float>(sqlite3_column_double(stmt, 11));
+		stats.three_p = sqlite3_column_int(stmt, 12);
+		stats.three_pa = sqlite3_column_int(stmt, 13);
+		stats.three_p_pct = static_cast<float>(sqlite3_column_double(stmt, 14));
+		stats.two_p = sqlite3_column_int(stmt, 15);
+		stats.two_pa = sqlite3_column_int(stmt, 16);
+		stats.two_p_pct = static_cast<float>(sqlite3_column_double(stmt, 17));
+		stats.efg_pct = static_cast<float>(sqlite3_column_double(stmt, 18));
+		stats.ft = static_cast<float>(sqlite3_column_double(stmt, 19));
+		stats.fta = sqlite3_column_int(stmt, 20);
+		stats.ft_pct = static_cast<float>(sqlite3_column_double(stmt, 21));
+		stats.orb = sqlite3_column_int(stmt, 22);
+		stats.drb = sqlite3_column_int(stmt, 23);
+		stats.trb = sqlite3_column_int(stmt, 24);
+		stats.ast = sqlite3_column_int(stmt, 25);
+		stats.stl = sqlite3_column_int(stmt, 26);
+		stats.blk = sqlite3_column_int(stmt, 27);
+		stats.tov = sqlite3_column_int(stmt, 28);
+		stats.pf = sqlite3_column_int(stmt, 29);
+		stats.pts = sqlite3_column_int(stmt, 30);
+		stats.awards =
 			sqlite3_column_text(stmt, 31)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 31))
 				: "";
-		std::cerr << "Found: " << current_stats.player_name << ", "
-				  << current_stats.team << std::endl;
-	} else {
+
+		player_seasons.push_back(stats);
+	}
+
+	if (player_seasons.empty()) {
 		error_msg = "No player found: " + player_name_input;
-		std::cerr << "Step returned: " << rc << " (100=ROW, 101=DONE)"
-				  << std::endl;
+		std::cerr << "No results found" << std::endl;
+	} else {
+		std::cerr << "Found " << player_seasons.size() << " seasons for "
+				  << player_name_input << std::endl;
 	}
 
 	sqlite3_finalize(stmt);
@@ -164,15 +167,19 @@ int main() {
 	std::string player_name_input;
 	std::string error_msg;
 	int current_screen = 0;
+	int selected_season = 0; // Index of currently selected season
 
 	// Player Input
 	InputOption input_option;
+	input_option.multiline = false;
 	input_option.on_enter = [&] {
 		performSearch(player_name_input, error_msg);
 		if (!error_msg.empty())
 			current_screen = 0;
-		else
+		else {
 			current_screen = 1;
+			selected_season = 0;
+		}
 	};
 	auto input_player_name =
 		Input(&player_name_input, "Enter Player Name", input_option);
@@ -190,8 +197,10 @@ int main() {
 				performSearch(player_name_input, error_msg);
 				if (!error_msg.empty())
 					current_screen = 0;
-				else
+				else {
 					current_screen = 1;
+					selected_season = 0;
+				}
 			}
 		},
 		Style());
@@ -199,28 +208,53 @@ int main() {
 	// Main screen back button
 	auto back_button = Button("<-", [&] { current_screen = 0; }, Style());
 
+	// Season Toggle
+	std::vector<std::string> season_entries;
+	auto season_toggle = Toggle(&season_entries, &selected_season);
+
+	// Container - make sure all components are included
 	auto component = Container::Vertical({
 		sport_toggle,
 		back_button,
 		input_player_name,
 		submit_button,
+		season_toggle,
 	});
 
-	// Event Handler for the Enter key
+	// Event Handler - update season entries after search
 	auto event_handler = CatchEvent(component, [&](Event event) {
 		if (event == Event::Return && input_player_name->Focused()) {
 			performSearch(player_name_input, error_msg);
-			if (!error_msg.empty())
+			if (!error_msg.empty()) {
 				current_screen = 0;
-			else
+			} else {
 				current_screen = 1;
-			player_name_input.clear();
+				player_name_input.clear();
+				// Update season entries
+				season_entries.clear();
+				for (const auto &stats : player_seasons) {
+					season_entries.push_back(stats.season);
+				}
+				selected_season = 0; // Reset to first season
+			}
 			return true;
+		}
+		// Handle toggle navigation (optional, for keyboard control)
+		if (season_toggle->Focused()) {
+			if (event == Event::ArrowLeft && selected_season > 0) {
+				selected_season--;
+				return true;
+			}
+			if (event == Event::ArrowRight &&
+				selected_season < static_cast<int>(season_entries.size() - 1)) {
+				selected_season++;
+				return true;
+			}
 		}
 		return false;
 	});
 
-	// Welcome Screen
+	// Welcome Screen (unchanged)
 	auto welcome = []() {
 		return vbox({
 				   text(L"   ______       __    ______              _          "
@@ -235,75 +269,77 @@ int main() {
 			   border;
 	};
 
-	// Player Info
+	// Player Info (unchanged)
 	auto player_info = [&]() {
+		if (player_seasons.empty()) {
+			return vbox({text("No player data") | bold}) | border;
+		}
 		return vbox({
-				   text("Player: " + current_stats.player_name) | bold,
-				   text("Team: " + current_stats.team),
-				   text("Position: " + current_stats.pos),
-				   text("Age: " + std::to_string(current_stats.age)),
+				   text("Player: " + player_seasons[0].player_name) | bold,
+				   text("Latest Team: " + player_seasons[0].team),
+				   text("Position: " + player_seasons[0].pos),
+				   text("Latest Age: " + std::to_string(player_seasons[0].age)),
 			   }) |
 			   border;
 	};
 
-	// Stats Display with proper percentage formatting
+	// Stats Display - ensure it uses selected_season
 	auto stats_display = [&]() {
-		if (current_stats.player_name.empty()) {
+		if (player_seasons.empty()) {
 			if (!error_msg.empty()) {
 				return text(error_msg) | color(Color::Red) | center;
 			}
 			return text("No player selected") | center;
 		}
 
-		// Format percentages to 2 decimal places
-		std::stringstream minutes, ftm, fg_pct, three_p_pct, two_p_pct, efg_pct,
+		// Bounds check to prevent out-of-range access
+		if (selected_season < 0 ||
+			selected_season >= static_cast<int>(player_seasons.size())) {
+			return text("Invalid season selection") | center;
+		}
+
+		const auto &stats = player_seasons[selected_season];
+		std::stringstream minutes, fg_pct, three_p_pct, two_p_pct, efg_pct,
 			ft_pct;
-		minutes << std::fixed << std::setprecision(2)
-				<< (current_stats.mp * 1.0f);
-		fg_pct << std::fixed << std::setprecision(2)
-			   << (current_stats.fg_pct * 100.0f);
+		minutes << std::fixed << std::setprecision(2) << stats.mp;
+		fg_pct << std::fixed << std::setprecision(2) << (stats.fg_pct * 100.0f);
 		three_p_pct << std::fixed << std::setprecision(2)
-					<< (current_stats.three_p_pct * 100.0f);
+					<< (stats.three_p_pct * 100.0f);
 		two_p_pct << std::fixed << std::setprecision(2)
-				  << (current_stats.two_p_pct * 100.0f);
+				  << (stats.two_p_pct * 100.0f);
 		efg_pct << std::fixed << std::setprecision(2)
-				<< (current_stats.efg_pct * 100.0f);
-		ft_pct << std::fixed << std::setprecision(2)
-			   << (current_stats.ft_pct * 100.0f);
+				<< (stats.efg_pct * 100.0f);
+		ft_pct << std::fixed << std::setprecision(2) << (stats.ft_pct * 100.0f);
 
 		return vbox({
-				   text("Player Stats - " + current_stats.season) | bold,
+				   text(stats.season) | bold,
 				   separator(),
-				   hbox({text("Games: " + std::to_string(current_stats.g))}),
-				   hbox({text("Minutes: " + minutes.str())}),
-				   hbox({text("Points: " + std::to_string(current_stats.pts))}),
-				   hbox({text("   FG: " + std::to_string(current_stats.fg) +
-							  "/" + std::to_string(current_stats.fga) + " (" +
-							  fg_pct.str() + "%)")}),
-				   hbox(
-					   {text("   3P: " + std::to_string(current_stats.three_p) +
-							 "/" + std::to_string(current_stats.three_pa) +
-							 " (" + three_p_pct.str() + "%)")}),
-				   hbox({text("   FT: " + std::to_string(current_stats.ft) +
-							  "/" + std::to_string(current_stats.fta) + " (" +
-							  ft_pct.str() + "%)")}),
-				   hbox({text("Rebounds: " + std::to_string(current_stats.trb) +
-							  " (Off: " + std::to_string(current_stats.orb) +
-							  ", Def: " + std::to_string(current_stats.drb) +
-							  ")")}),
-				   hbox(
-					   {text("Assists: " + std::to_string(current_stats.ast))}),
-				   hbox({text("Steals: " + std::to_string(current_stats.stl))}),
-				   hbox({text("Blocks: " + std::to_string(current_stats.blk))}),
-				   hbox({text("Turnovers: " +
-							  std::to_string(current_stats.tov))}),
-				   hbox({text("Fouls: " + std::to_string(current_stats.pf))}),
-				   hbox({text("Awards: " + current_stats.awards)}),
+				   text("Team: " + stats.team),
+				   text("Games: " + std::to_string(stats.g)),
+				   text("Minutes: " + minutes.str()),
+				   text("Points: " + std::to_string(stats.pts)),
+				   text("FG: " + std::to_string(stats.fg) + "/" +
+						std::to_string(stats.fga) + " (" + fg_pct.str() + "%)"),
+				   text("3P: " + std::to_string(stats.three_p) + "/" +
+						std::to_string(stats.three_pa) + " (" +
+						three_p_pct.str() + "%)"),
+				   text("FT: " + std::to_string(stats.ft) + "/" +
+						std::to_string(stats.fta) + " (" + ft_pct.str() + "%)"),
+				   text("Reb: " + std::to_string(stats.trb) +
+						" (O:" + std::to_string(stats.orb) +
+						", D:" + std::to_string(stats.drb) + ")"),
+				   text("Ast: " + std::to_string(stats.ast)),
+				   text("Stl: " + std::to_string(stats.stl)),
+				   text("Blk: " + std::to_string(stats.blk)),
+				   text("TO: " + std::to_string(stats.tov)),
+				   text("PF: " + std::to_string(stats.pf)),
+				   text("Awards: " + stats.awards),
 			   }) |
-			   border | flex;
+			   border | flex_grow;
 	};
 
-	auto renderer = Renderer(event_handler, [&] {
+	// Renderer - ensure toggle is interactive
+	auto renderer = Renderer(component, [&]() -> Element {
 		if (current_screen == 0) {
 			return vbox({
 					   welcome(),
@@ -321,20 +357,19 @@ int main() {
 				   }) |
 				   vcenter | hcenter | border;
 		} else {
-			return gridbox({
-					   {
-						   vbox({player_info() |
-								 size(HEIGHT, GREATER_THAN, 10)}) |
-							   size(WIDTH, EQUAL, 22),
-						   vbox({
-							   hbox({back_button->Render(),
-									 input_player_name->Render() | vcenter |
-										 xflex_grow,
-									 submit_button->Render()}) |
-								   border,
-							   stats_display() | flex_grow,
-						   }) | flex_grow,
-					   },
+			return vbox({
+					   hbox({
+						   back_button->Render(),
+						   input_player_name->Render() | xflex_grow,
+						   submit_button->Render(),
+						   season_toggle->Render() |
+							   size(WIDTH, GREATER_THAN,
+									20), // Removed focusable
+					   }) | border,
+					   hbox({
+						   player_info() | size(WIDTH, EQUAL, 22),
+						   stats_display() | flex_grow,
+					   }) | flex_grow,
 				   }) |
 				   size(HEIGHT, GREATER_THAN, 40) | border;
 		}
