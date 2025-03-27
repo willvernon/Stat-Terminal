@@ -199,7 +199,7 @@ int main() {
 	// Main screen back button
 	auto back_button = Button("<-", [&] { current_screen = 0; }, Style());
 
-	auto component = Container::Horizontal({
+	auto component = Container::Vertical({
 		sport_toggle,
 		input_player_name,
 		submit_button,
