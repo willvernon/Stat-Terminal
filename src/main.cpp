@@ -199,11 +199,11 @@ int main() {
 	// Main screen back button
 	auto back_button = Button("<-", [&] { current_screen = 0; }, Style());
 
-	auto component = Container::Vertical({
+	auto component = Container::Horizontal({
 		sport_toggle,
-		back_button,
 		input_player_name,
 		submit_button,
+		back_button,
 	});
 
 	// Event Handler for the Enter key
@@ -258,8 +258,6 @@ int main() {
 		// Format percentages to 2 decimal places
 		std::stringstream minutes, ftm, fg_pct, three_p_pct, two_p_pct, efg_pct,
 			ft_pct;
-		minutes << std::fixed << std::setprecision(2)
-				<< (current_stats.mp * 1.0f);
 		fg_pct << std::fixed << std::setprecision(2)
 			   << (current_stats.fg_pct * 100.0f);
 		three_p_pct << std::fixed << std::setprecision(2)
@@ -275,21 +273,20 @@ int main() {
 				   text("Player Stats - " + current_stats.season) | bold,
 				   separator(),
 				   hbox({text("Games: " + std::to_string(current_stats.g))}),
-				   hbox({text("Minutes: " + minutes.str())}),
+				   hbox({text("Minutes: " + std::to_string(current_stats.mp))}),
 				   hbox({text("Points: " + std::to_string(current_stats.pts))}),
-				   hbox({text("   FG: " + std::to_string(current_stats.fg) +
-							  "/" + std::to_string(current_stats.fga) + " (" +
+				   hbox({text("FG: " + std::to_string(current_stats.fg) + "/" +
+							  std::to_string(current_stats.fga) + " (" +
 							  fg_pct.str() + "%)")}),
-				   hbox(
-					   {text("   3P: " + std::to_string(current_stats.three_p) +
-							 "/" + std::to_string(current_stats.three_pa) +
-							 " (" + three_p_pct.str() + "%)")}),
-				   hbox({text("   FT: " + std::to_string(current_stats.ft) +
-							  "/" + std::to_string(current_stats.fta) + " (" +
+				   hbox({text("3P: " + std::to_string(current_stats.three_p) +
+							  "/" + std::to_string(current_stats.three_pa) +
+							  " (" + three_p_pct.str() + "%)")}),
+				   hbox({text("FT: " + std::to_string(current_stats.ft) + "/" +
+							  std::to_string(current_stats.fta) + " (" +
 							  ft_pct.str() + "%)")}),
 				   hbox({text("Rebounds: " + std::to_string(current_stats.trb) +
-							  " (Off: " + std::to_string(current_stats.orb) +
-							  ", Def: " + std::to_string(current_stats.drb) +
+							  " (O: " + std::to_string(current_stats.orb) +
+							  ", D: " + std::to_string(current_stats.drb) +
 							  ")")}),
 				   hbox(
 					   {text("Assists: " + std::to_string(current_stats.ast))}),
