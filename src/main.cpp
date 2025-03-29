@@ -6,13 +6,18 @@
 #include "ftxui/dom/elements.hpp"
 #include "ftxui/util/ref.hpp"
 #include "sqlite3.h"
+#include <chrono>
+#include <cstdlib> // For getenv
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace ftxui;
 
+// Define PlayerStats struct first
 struct PlayerStats {
 	std::string season;
 	int rk;
@@ -48,9 +53,11 @@ struct PlayerStats {
 	std::string awards;
 };
 
-// Global instance (or pass it around as needed)
+// Global variables
 PlayerStats current_stats;
+bool show_copy_dialog = false;
 
+// Style function
 ButtonOption Style() {
 	auto option = ButtonOption::Animated();
 	option.transform = [](const EntryState &s) {
@@ -63,6 +70,7 @@ ButtonOption Style() {
 	return option;
 }
 
+// Search function
 void performSearch(const std::string &player_name_input,
 				   std::string &error_msg) {
 	std::cerr << "Searching for: " << player_name_input << std::endl;
@@ -148,16 +156,53 @@ void performSearch(const std::string &player_name_input,
 			sqlite3_column_text(stmt, 31)
 				? reinterpret_cast<const char *>(sqlite3_column_text(stmt, 31))
 				: "";
-		std::cerr << "Found: " << current_stats.player_name << ", "
-				  << current_stats.team << std::endl;
 	} else {
 		error_msg = "No player found: " + player_name_input;
-		std::cerr << "Step returned: " << rc << " (100=ROW, 101=DONE)"
-				  << std::endl;
 	}
 
 	sqlite3_finalize(stmt);
 	sqlite3_close(db);
+}
+
+// Export CSV function
+bool exportStatsToCSV() {
+	const char *home_dir = std::getenv("HOME");
+	if (!home_dir) {
+		std::cerr << "Could not get HOME environment variable" << std::endl;
+		return false;
+	}
+
+	std::string full_path =
+		std::string(home_dir) + "/Downloads/player_stats.csv";
+	std::ofstream file(full_path);
+	if (!file.is_open()) {
+		std::cerr << "Failed to open file at " << full_path << std::endl;
+		return false;
+	}
+
+	file << "Season,Rk,Player,Age,Team,Position,Games,Games Started,Minutes,"
+		 << "FG,FGA,FG%,3P,3PA,3P%,2P,2PA,2P%,eFG%,FT,FTA,FT%,ORB,DRB,TRB,"
+		 << "AST,STL,BLK,TOV,PF,PTS,Awards\n";
+
+	file << current_stats.season << "," << current_stats.rk << ","
+		 << current_stats.player_name << "," << current_stats.age << ","
+		 << current_stats.team << "," << current_stats.pos << ","
+		 << current_stats.g << "," << current_stats.gs << ","
+		 << current_stats.mp << "," << current_stats.fg << ","
+		 << current_stats.fga << "," << current_stats.fg_pct << ","
+		 << current_stats.three_p << "," << current_stats.three_pa << ","
+		 << current_stats.three_p_pct << "," << current_stats.two_p << ","
+		 << current_stats.two_pa << "," << current_stats.two_p_pct << ","
+		 << current_stats.efg_pct << "," << current_stats.ft << ","
+		 << current_stats.fta << "," << current_stats.ft_pct << ","
+		 << current_stats.orb << "," << current_stats.drb << ","
+		 << current_stats.trb << "," << current_stats.ast << ","
+		 << current_stats.stl << "," << current_stats.blk << ","
+		 << current_stats.tov << "," << current_stats.pf << ","
+		 << current_stats.pts << "," << current_stats.awards << "\n";
+
+	file.close();
+	return true;
 }
 
 int main() {
@@ -165,7 +210,8 @@ int main() {
 	std::string error_msg;
 	int current_screen = 0;
 
-	// Player Input
+	auto screen = ScreenInteractive::Fullscreen();
+
 	InputOption input_option;
 	input_option.on_enter = [&] {
 		performSearch(player_name_input, error_msg);
@@ -177,12 +223,10 @@ int main() {
 	auto input_player_name =
 		Input(&player_name_input, "Enter Player Name", input_option);
 
-	// League Toggle
 	int toggle_selected = 0;
 	std::vector<std::string> toggle_entries = {"NFL", "NBA", "NHL"};
 	auto sport_toggle = Toggle(&toggle_entries, &toggle_selected);
 
-	// Submit button
 	auto submit_button = Button(
 		"Search",
 		[&] {
@@ -196,17 +240,30 @@ int main() {
 		},
 		Style());
 
-	// Main screen back button
 	auto back_button = Button("<-", [&] { current_screen = 0; }, Style());
+
+	auto export_button = Button(
+		"Export CSV",
+		[&] {
+			if (!current_stats.player_name.empty() && exportStatsToCSV()) {
+				show_copy_dialog = true;
+				std::thread([&] {
+					std::this_thread::sleep_for(std::chrono::seconds(2));
+					show_copy_dialog = false;
+					screen.PostEvent(Event::Custom);
+				}).detach();
+			}
+		},
+		Style());
 
 	auto component = Container::Vertical({
 		sport_toggle,
 		input_player_name,
 		submit_button,
 		back_button,
+		export_button,
 	});
 
-	// Event Handler for the Enter key
 	auto event_handler = CatchEvent(component, [&](Event event) {
 		if (event == Event::Return && input_player_name->Focused()) {
 			performSearch(player_name_input, error_msg);
@@ -220,7 +277,6 @@ int main() {
 		return false;
 	});
 
-	// Welcome Screen
 	auto welcome = []() {
 		return vbox({
 				   text(L"   ______       __    ______              _          "
@@ -235,18 +291,31 @@ int main() {
 			   border;
 	};
 
-	// Player Info
 	auto player_info = [&]() {
-		return vbox({
-				   text("Player: " + current_stats.player_name) | bold,
-				   text("Team: " + current_stats.team),
-				   text("Position: " + current_stats.pos),
-				   text("Age: " + std::to_string(current_stats.age)),
-			   }) |
-			   border;
+		std::vector<Element> elements = {
+			vbox({
+				text("Player: " + current_stats.player_name) | bold,
+				text("Team: " + current_stats.team),
+				text("Position: " + current_stats.pos),
+				text("Age: " + std::to_string(current_stats.age)),
+			}) |
+			border};
+
+		elements.push_back(export_button->Render() | border);
+		if (show_copy_dialog) {
+			elements.push_back(
+				vbox({filler(),
+					  hbox({filler(),
+							vbox({text("Saved to Downloads") | center}) |
+								border | size(WIDTH, EQUAL, 40),
+							filler()}),
+					  filler()}) |
+				vcenter | hcenter);
+		}
+
+		return vbox(elements);
 	};
 
-	// Stats Display with proper percentage formatting
 	auto stats_display = [&]() {
 		if (current_stats.player_name.empty()) {
 			if (!error_msg.empty()) {
@@ -255,7 +324,6 @@ int main() {
 			return text("No player selected") | center;
 		}
 
-		// Format percentages to 2 decimal places
 		std::stringstream minutes, ftm, fg_pct, three_p_pct, two_p_pct, efg_pct,
 			ft_pct;
 		fg_pct << std::fixed << std::setprecision(2)
@@ -300,44 +368,49 @@ int main() {
 			   border | flex;
 	};
 
-	auto renderer = Renderer(event_handler, [&] {
+	auto renderer = Renderer(event_handler, [&]() -> Element {
+		Element content;
 		if (current_screen == 0) {
-			return vbox({
-					   welcome(),
-					   hbox({text("Select a league: "),
-							 sport_toggle->Render()}) |
-						   hcenter | vcenter | border | xflex,
-					   hbox({text("Player: ") | vcenter,
-							 input_player_name->Render() | vcenter |
-								 size(WIDTH, GREATER_THAN, 20),
-							 submit_button->Render()}) |
-						   hcenter | border,
-					   error_msg.empty()
-						   ? text("")
-						   : text(error_msg) | color(Color::Red) | center,
-				   }) |
-				   vcenter | hcenter | border;
+			content =
+				vbox({
+					welcome(),
+					hbox({text("Select a league: "), sport_toggle->Render()}) |
+						hcenter | vcenter | border | xflex,
+					hbox({text("Player: ") | vcenter,
+						  input_player_name->Render() | vcenter |
+							  size(WIDTH, GREATER_THAN, 20),
+						  submit_button->Render()}) |
+						hcenter | border,
+					error_msg.empty()
+						? text("")
+						: text(error_msg) | color(Color::Red) | center,
+				}) |
+				vcenter | hcenter | border;
 		} else {
-			return gridbox({
-					   {
-						   vbox({player_info() |
-								 size(HEIGHT, GREATER_THAN, 10)}) |
-							   size(WIDTH, EQUAL, 22),
-						   vbox({
-							   hbox({back_button->Render(),
-									 input_player_name->Render() | vcenter |
-										 xflex_grow,
-									 submit_button->Render()}) |
-								   border,
-							   stats_display() | flex_grow,
-						   }) | flex_grow,
-					   },
-				   }) |
-				   size(HEIGHT, GREATER_THAN, 40) | border;
+			content =
+				gridbox({
+					{
+						vbox({player_info() | size(HEIGHT, GREATER_THAN, 10)}) |
+							size(WIDTH, EQUAL, 22),
+						vbox({
+							hbox({
+								back_button->Render(),
+								input_player_name->Render() | vcenter |
+									xflex_grow,
+								submit_button->Render(),
+							}) | border,
+							stats_display() | flex_grow,
+						}) | flex_grow,
+					},
+				}) |
+				size(HEIGHT, GREATER_THAN, 70) | border;
 		}
+
+		return vbox({filler(), hbox({filler(), content | flex, filler()}),
+					 filler()}) |
+			   vcenter | hcenter;
 	});
 
-	auto screen = ScreenInteractive::Fullscreen();
 	screen.Loop(renderer);
 	return 0;
 }
