@@ -59,7 +59,7 @@ Run the App
 - Launch the app in your terminal.
 - Use the FTXUI interface to search for players or browse stats.
 - Example commands (to be implemented):
-    - search LeBron James - Capilization Matters - Displays LeBron's latest stats.
+    - search LeBron James - Capitalization Matters - Displays LeBron's latest stats.
 
 ### Current Status
 
