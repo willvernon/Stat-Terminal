@@ -78,7 +78,9 @@ TODO
   - [ ] Add a clear or reset button
   - [ ] Add a season selector drop down
   - [ ] Add a team selector on the splash
-  - [ ]
+  - [ ] Fix Multi Season Box
+     
+- [ ] MCP Server
 
 - [?] NLP for searching for stats
 - [?]
